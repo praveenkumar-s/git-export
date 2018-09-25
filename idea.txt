@@ -1,0 +1,15 @@
+process 1
+1. Get list of epics from Zenhub
+2. for each epic in Zenhub, check if there is associated Master feature record on endurance. If yes go to 2.a | else:2.b
+    a. Record exists in endurance. Get issue details from github. Get Master feature details from Aha. Compare both. If update required: 2.a.a else 2.a.b
+        a.update aha with data from github
+        b.no need to update, log and come out
+    b. No record in Aha: Create a record | update mapping details to endurance
+
+    
+process2:
+1.get list of epics from Zenhub
+2.for each items in epics, get details of associated stories and store it on memory
+3.for each item in aha features, check githib issue id, check the corresponding epic number on in memory
+4.Get data from endurance (inmemory) and get reference number of the epic 
+5.Check if udpate is required, if yes, update. Else Log saying no change is required
