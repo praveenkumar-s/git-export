@@ -1,0 +1,18 @@
+{"Wishlist":"Wishlist",
+"User Stories":"Backlog",
+"Epics": "Backlog",
+"Issues": "Backlog",
+"Next Iteration":"Ready for Dev",
+"This Iteration":"Ready for Dev",
+"In Dev":"In Dev",
+"Epics In Dev":"In Dev",
+"Parked":"Parked",
+"Dev Done":"Dev Done",
+"Pending Fixes":"In QA",
+"Ready for QA":"Ready for QA",
+"In QA":"In QA",
+"Pending Automation":"In QA",
+"Ready for Design Review":"In QA",
+"Ready for Release":"Ready for Release",
+"Closed":"Released"
+}
