@@ -2,7 +2,7 @@ import pyrebase
 import sys
 import os
 
-class firebase_client:
+class Firebase_client:
     def __init__(self):        
         config = {
     'apiKey': os.environ['FIREBASE_API_KEY'],
