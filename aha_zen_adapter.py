@@ -8,8 +8,11 @@ import time
 from objectifier import Objectifier
 import os
 import argparse
+from firebase_client import Firebase_Client 
+from datetime import datetime
+import config
 
-logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s")
+logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", filename=str(datetime.now())+'.log', filemode='w')
 sys.setdefaultencoding('utf-8')
 
 AHA_TOKEN=os.environ.get('AHA_TOKEN')
@@ -17,6 +20,13 @@ ZENHUB_TOKEN=os.environ.get('ZENHUB_TOKEN')
 AHA_HEADER={'Authorization':AHA_TOKEN,'Content-Type': "application/json","User-Agent":"praveentechnic@gmail.com"}
 ZENHUB_HEADER={'X-Authentication-Token':ZENHUB_TOKEN}
 map_data= json.load(open('zen2ahaMap.json'))
+
+########################DATA_STORE##################################
+FBC=Firebase_Client()
+ENDURANCE= dict(FBC.getdb().child('ENDURANCE').get().val())
+
+############################################################
+
 
 #Get all the features along with their Ids and referencenumbers
 def getFeatureListFromAha():
@@ -72,6 +82,33 @@ def getIssueDetailFromZen(repoid,issue_id):
         return None
 
 
+def getEpicDetailfromZen(repoid,epic_id):
+    rs=requests.get('https://api.zenhub.io/p1/repositories/{0}/epics/{1}'.format(repoid,epic_id),headers=ZENHUB_HEADER)
+    if(rs.status_code==200):
+        return rs.json()
+    elif(rs.staus_code==429):
+        #handle ratelimit
+        time.sleep(10)
+        return getEpicDetailfromZen(repoid,epic_id)
+    else:
+        return None
+
+
+def buildEpicStoryMap(repoid):
+    All_Epics=None
+    issue_epic_map={}
+    rs=requests.get('https://api.zenhub.io/p1/repositories/{0}/epics/'.format(repoid),headers=ZENHUB_HEADER)
+    if(rs.status_code==200):
+        All_Epics=rs.json()
+    for items in All_Epics['epic_issues']:
+        epic_data=getEpicDetailfromZen(repoid,items['issue_number'])
+        if(epic_data is not None):
+            for issues in epic_data['issues']:
+                issue_epic_map[str(issues['issue_number'])]=items['issue_number']
+    return issue_epic_map
+
+EPIC_MAP=buildEpicStoryMap(config.repoid)
+
 #Compare status and generate diff 
 def generatediff(Aha_feature,Zen_issue):
     zen=Objectifier(Zen_issue)
@@ -82,6 +119,18 @@ def generatediff(Aha_feature,Zen_issue):
             changes.append({'workflow_status':{"name":getTranslationData(map_data,zen.pipeline.name)}})            
         if(Aha.original_estimate!=zen.estimate.value):
             changes.append({'original_estimate':zen.estimate.value}) 
+        if(zen.is_epic==False):
+            try:
+                Aha_Epic=Aha.master_feature.reference_num
+            except:
+                Aha_Epic=None
+            try:
+                Zen_Epic=ENDURANCE[str(EPIC_MAP[zen.id])]['aha_ref_num']
+            except:
+                Zen_Epic=None
+            if(Aha_Epic!=Zen_Epic and Zen_Epic is not None):
+                changes.append({'master_feature':Zen_Epic})
+
     except Exception as e:
         logging.error(e.message)
     return changes
