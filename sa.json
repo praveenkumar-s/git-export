@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "releasetrackerqube",
+  "private_key_id": "ad5fc5c3174962408d5da1494baa3831767ad077",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCzY/xnaeGUrQMT\n6fhZOa01lXA2adyd++kpAYyYRPEruw5RNWMTd+jeYfWCWtqihEN5r73YXjZY/WNq\nYswNTfqRz9CuXXoycAh8B4GQtF9kRFsVoSqKKWhNdo1Zd4Y4E2TjDfbibzVee11c\n38Iw3M41zx7h3nJhcMNiz/5CtwPvOdVB/PlfzDqxRcNtPnLEeoRq5BBhBurOGugn\nsWycrDCqceFBB5U75RN+lPbYqeqQfQ2fFxCZO7CBZWc7f+scJ+t3c298MmsNQ20g\n4P+l6wu4UO6aK0uX/0AjuK9bLCa8+eN+UzgAJixgpKQ/eH339lvJW+UAC+OKxWu0\n4rYobfsvAgMBAAECggEAQwfq8hdpz7zASComfuyi0MFovyRaZ/wP2R83klQ8i7sn\nM+gPf+BP9vzCmLVrOcvTTL6C4Tz+8Myp38BP/+6x4Nc24liShxM+0F2bp98GP/ic\n0l25AAxN6ZgRZCtZz01L5t26cUzds9LEBaaksM5pDUk6AGs28TsJ/zu6BeLOCQ7A\nsqjHzbl8tnYF3cFBfaUMr+8c90T+tGn179vu0FkOjv81bVUfWpFaauWYT8J0LZIZ\nSGB04H4/lYorpaHa7O7mxDKAg81BlZe1u1kvl1UN/SywCyZAaMeuL88S7Ct16S/l\nbFSWEyedPwVRmDfgLBrlPLlW+oXcfBRk8OqQOvda6QKBgQD45bYft9YUjI3teTqE\ni84XTUZ4VvIdpyWM9kIzBJEmNBstQKbkaJZVbkepVIVE071ZjdeJvCgOQMslOkOf\nDIgyDj5Ftl1qVsdsBdPs4ypFcaKBqqJ1zwq3y+0RQuDh1u/Kizm0i7GqV1W6fwy8\nOa0DdFSZVaXu74NauGGoDBTyZwKBgQC4goBqOQxH0OF1r4fZzlS5oLr3E679wiu3\nzlPoO937DtJOMiSVi0SHdd3XXi1V0oLM8qhXDaI5WDcZy8eRg33LSTykBcfmaD6S\n6nZW3h1TG8QsLPFaOZWd632KUEfxpxqVA5Mr7V41+kpipoQ5q6WCFsUCtZntShRl\n+SNO8LED+QKBgQCh8kUoKiN/R1zpkSGEMLst6jfaASiUJreGGo1ESMpwwyKTtSdi\nIrL+bzztbnMwL11asbH2ipi9fWcwl9J74FmVyDK4hUoO8Nvc64XS8pQEj0WffPks\nEkT1BhkATDWqfIGVljU7xlEZdq3vJM+SgSyTvNN22YWYC/u5wZK5FvNiLQKBgQCR\nGbgJUTHSLHeSCGeKpxPEI53E/srILvIYi387DBGnBWHoMtDIdgx/hvbeDucSLgnF\nSTOPul4QQMqcU8BvM/wyaTbyOsWY8fP7r70+1VA0coqUvwdTECQUXASPSFE7vlFO\nTNBpZDOJuXrUF+W2QMFZC7UFS3FwxahDBWl6BBkBaQKBgQDAU7pHkVZIoVOUueF+\n5N7UXXYx3XzrJGTyHXOXsY3roYTAvfluN7S0Vs2bp0pmVDG/crroUP2KIKvZxNXj\nG0dRICTwYNbk6sECuy49XpYj425T0vGC0ic4dYoobze2/G08RzjPtVQ2RUtYE5yv\nsHOrZXFA+KJ+ow8p7VK4LSdREQ==\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-b9y7i@releasetrackerqube.iam.gserviceaccount.com",
+  "client_id": "109721268601963879320",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://accounts.google.com/o/oauth2/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-b9y7i%40releasetrackerqube.iam.gserviceaccount.com"
+}

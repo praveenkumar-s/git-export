@@ -107,7 +107,7 @@ def buildEpicStoryMap(repoid):
                 issue_epic_map[str(issues['issue_number'])]=items['issue_number']
     return issue_epic_map
 
-EPIC_MAP=buildEpicStoryMap(config.repoid)
+EPIC_MAP=buildEpicStoryMap(config.Zenhub_repo_Id)
 
 #Compare status and generate diff 
 def generatediff(Aha_feature,Zen_issue):
