@@ -24,7 +24,6 @@ map_data= json.load(open('zen2ahaMap.json'))
 ########################DATA_STORE##################################
 FBC=Firebase_Client()
 ENDURANCE= dict(FBC.getdb().child('ENDURANCE').get().val())
-
 ############################################################
 
 
