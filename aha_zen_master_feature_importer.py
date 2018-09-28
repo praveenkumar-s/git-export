@@ -7,6 +7,7 @@ import github3
 from autologging import logged,traced,TRACE 
 import logging
 import sys
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s",filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
 
@@ -16,6 +17,8 @@ logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:
 AHA_TOKEN=os.environ.get('AHA_TOKEN')
 ZENHUB_TOKEN=os.environ.get('ZENHUB_TOKEN')
 GITHUB_TOKEN=os.environ.get('GITHUB_TOKEN')
+
+
 
 AHA_HEADER={'Authorization':AHA_TOKEN,'Content-Type': "application/json","User-Agent":"praveentechnic@gmail.com"}
 ZENHUB_HEADER={'X-Authentication-Token':ZENHUB_TOKEN}
@@ -194,7 +197,7 @@ def main():
                         #TODO: Log Error
                         pass
     #FBC.getdb().child('ENDURANCE').set(ENDURANCE)
-    update_to_endurance=requests.post('https://ndurance.herokuapp.com/api/data_store/aha_zen',headers={'x-api-key':config.ndurance_key}, data= json.dumps(ENDURANCE))
+    update_to_endurance=requests.post('https://ndurance.herokuapp.com/api/data_store/aha_zen',headers={'x-api-key':config.ndurance_key,'Content-Type':'application/json'}, data= json.dumps(ENDURANCE))
     if(update_to_endurance.status_code==201):
         logging.info("successfully updated status to endurance")
     else:
