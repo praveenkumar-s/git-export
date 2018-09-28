@@ -4,19 +4,21 @@ import os
 import json
 from objectifier import Objectifier
 import github3
-from firebase_client import Firebase_Client 
 from autologging import logged,traced,TRACE 
 import logging
 import sys
 
-logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s")
+logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s",filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
 
 
 
 
-AHA_TOKEN=os.environ.get('AHA_TOKEN')
-ZENHUB_TOKEN=os.environ.get('ZENHUB_TOKEN')
-GITHUB_TOKEN=os.environ.get('GITHUB_TOKEN')
+#AHA_TOKEN=os.environ.get('AHA_TOKEN')
+#ZENHUB_TOKEN=os.environ.get('ZENHUB_TOKEN')
+#GITHUB_TOKEN=os.environ.get('GITHUB_TOKEN')
+AHA_TOKEN='Bearer f9af772244b98ba792f03d38031ec1417b05634422ba2ac2d03ae4cc91a2bfc3'
+ZENHUB_TOKEN='7c3980b959d71559318a61903b2c5fe83b023f134f64ae933ef521ca41de223bcd73a89aac669942'
+GITHUB_TOKEN="1560095e18ee9b29791de05d8c32ddf39bb305a3"
 
 
 AHA_HEADER={'Authorization':AHA_TOKEN,'Content-Type': "application/json","User-Agent":"praveentechnic@gmail.com"}
@@ -26,8 +28,7 @@ ZENHUB_HEADER={'X-Authentication-Token':ZENHUB_TOKEN}
 
 
 ########################DATA_STORE##################################
-FBC=Firebase_Client()
-ENDURANCE= dict(FBC.getdb().child('ENDURANCE').get().val())
+ENDURANCE= requests.get('https://ndurance.herokuapp.com/api/data_store/aha_zen', headers={'x-api-key':config.ndurance_key}).json()
 ############################################################
 
 #Get list of Epics from Zen hub
@@ -185,8 +186,9 @@ def main():
                     changes['description']=G_description
                 if(A_status!=Z_status):
                     changes['workflow_status']={'name':Z_status}
-                if(A_release_id!=Aha_releases[G_Release]['reference_num']):
-                    changes['release']={'reference_num':Aha_releases[G_Release]['reference_num']}
+                if(G_Release !=None):
+                    if(A_release_id!=Aha_releases[G_Release]['reference_num']):
+                        changes['release']={'reference_num':Aha_releases[G_Release]['reference_num']}
                 if(changes!={}):
                     update_response=updateMasterFeatureAha(aha_epic['aha_ref_num'],changes=changes)
                     if(update_response.status_code==200):
@@ -195,7 +197,12 @@ def main():
                     else:
                         #TODO: Log Error
                         pass
-    FBC.getdb().child('ENDURANCE').set(ENDURANCE)
+    #FBC.getdb().child('ENDURANCE').set(ENDURANCE)
+    update_to_endurance=requests.post('https://ndurance.herokuapp.com/api/data_store/aha_zen',headers={'x-api-key':config.ndurance_key}, data= json.dumps(ENDURANCE))
+    if(update_to_endurance.status_code==201):
+        logging.info("successfully updated status to endurance")
+    else:
+        logging.error("Non 200 code from ndurance"+str(update_to_endurance.status_code))
     
 
 main()

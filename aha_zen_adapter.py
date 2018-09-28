@@ -8,11 +8,10 @@ import time
 from objectifier import Objectifier
 import os
 import argparse
-from firebase_client import Firebase_Client 
 from datetime import datetime
 import config
 
-logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", filename=str(datetime.now())+'.log', filemode='w')
+logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
 sys.setdefaultencoding('utf-8')
 
 AHA_TOKEN=os.environ.get('AHA_TOKEN')
@@ -22,8 +21,7 @@ ZENHUB_HEADER={'X-Authentication-Token':ZENHUB_TOKEN}
 map_data= json.load(open('zen2ahaMap.json'))
 
 ########################DATA_STORE##################################
-FBC=Firebase_Client()
-ENDURANCE= dict(FBC.getdb().child('ENDURANCE').get().val())
+ENDURANCE= requests.get('https://ndurance.herokuapp.com/api/data_store/aha_zen', headers={'x-api-key':config.ndurance_key}).json()
 ############################################################
 
 
