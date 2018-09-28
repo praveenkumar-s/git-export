@@ -127,7 +127,13 @@ def generatediff(Aha_feature,Zen_issue):
                 Zen_Epic=None
             if(Aha_Epic!=Zen_Epic and Zen_Epic is not None):
                 changes.append({'master_feature':Zen_Epic})
-
+            ####Updating start and end date as per release date:
+            if(Aha.release is not None):
+                if(Aha.release.start_date!=Aha.start_date):
+                    changes.append({'start_date':Aha.release.start_date})
+                if(Aha.release.release_date!=Aha.due_date):
+                    changes.append({'due_date':Aha.release.release_date})
+            ############################################
     except Exception as e:
         logging.error(e.message)
     return changes
