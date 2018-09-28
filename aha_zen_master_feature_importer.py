@@ -13,13 +13,9 @@ logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:
 
 
 
-#AHA_TOKEN=os.environ.get('AHA_TOKEN')
-#ZENHUB_TOKEN=os.environ.get('ZENHUB_TOKEN')
-#GITHUB_TOKEN=os.environ.get('GITHUB_TOKEN')
-AHA_TOKEN='Bearer f9af772244b98ba792f03d38031ec1417b05634422ba2ac2d03ae4cc91a2bfc3'
-ZENHUB_TOKEN='7c3980b959d71559318a61903b2c5fe83b023f134f64ae933ef521ca41de223bcd73a89aac669942'
-GITHUB_TOKEN="1560095e18ee9b29791de05d8c32ddf39bb305a3"
-
+AHA_TOKEN=os.environ.get('AHA_TOKEN')
+ZENHUB_TOKEN=os.environ.get('ZENHUB_TOKEN')
+GITHUB_TOKEN=os.environ.get('GITHUB_TOKEN')
 
 AHA_HEADER={'Authorization':AHA_TOKEN,'Content-Type': "application/json","User-Agent":"praveentechnic@gmail.com"}
 ZENHUB_HEADER={'X-Authentication-Token':ZENHUB_TOKEN}
