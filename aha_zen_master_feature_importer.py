@@ -72,7 +72,7 @@ def getAllReleasesfromAha():
     totalpage=10
     releases={}
     while current_page<=totalpage:
-        rs=requests.get('https://qube-cinema.aha.io/api/v1/products/{0}/releases'.format(config.product_ref),headers=AHA_HEADER)
+        rs=requests.get('https://qube-cinema.aha.io/api/v1/products/{0}/releases'.format(config.product_ref),params={'page':current_page},headers=AHA_HEADER)
         data=rs.json()
         for items in data['releases']:
             releases[items['name']]=items
@@ -141,8 +141,10 @@ def main():
         aha_epic=getTranslationData(ENDURANCE,str(items['issue_number']))
         if(aha_epic==None):
             issue=git_repo.issue(items['issue_number'])
-            
-            release_id=Aha_releases[issue.milestone.title]['reference_num'] if issue.milestone is not None else None
+            try:
+                release_id=Aha_releases[issue.milestone.title]['reference_num'] if issue.milestone is not None else None
+            except:
+                release_id=None
             zen_issue_detail=getIssueDetailFromZen(repoid=config.Zenhub_repo_Id,issue_id=items['issue_number'])
             name=issue.title
             description=issue.body
@@ -151,7 +153,7 @@ def main():
                 response=insertMasterFeatureAha(release_id,name,description,status)
                 if(response.status_code==200):
                     this_master_feature=response.json()
-                    logging.info("Successfully created:  "+  str(this_master_feature['master_feature']['reference_num']))
+                    logging.info("CREATED"+  str(this_master_feature['master_feature']['reference_num']))
                     ENDURANCE[str(items['issue_number'])]={
                         "aha_ref_num":this_master_feature['master_feature']['reference_num']
                     }
@@ -186,17 +188,21 @@ def main():
                 if(A_status!=Z_status):
                     changes['workflow_status']={'name':Z_status}
                 if(G_Release !=None):
-                    if(A_release_id!=Aha_releases[G_Release]['reference_num']):
-                        changes['release']={'reference_num':Aha_releases[G_Release]['reference_num']}
+                    if(getTranslationData( Aha_releases,G_Release) is not None ) :
+                        if(A_release_id!=getTranslationData( Aha_releases,G_Release)['reference_num']):
+                            changes['release_id']=Aha_releases[G_Release]['id']
                 if(changes!={}):
                     update_response=updateMasterFeatureAha(aha_epic['aha_ref_num'],changes=changes)
                     if(update_response.status_code==200):
-                        #TODO: Print update log
+                        
+                        logging.info("UPDATED"+str(aha_epic)+str(changes))
                         print "updated!:  "+ str(aha_epic) + str(changes)
                     else:
-                        #TODO: Log Error
-                        pass
-    #FBC.getdb().child('ENDURANCE').set(ENDURANCE)
+                        logging.error("Error while updating.."+ str(update_response.status_code)+ str(update_response.content))
+                else:
+                    logging.info('NO CHANGE! '+ str(aha_epic))
+                    print('NO CHANGE! on ' + str(aha_epic))                            
+    
     update_to_endurance=requests.post('https://ndurance.herokuapp.com/api/data_store/aha_zen',headers={'x-api-key':config.ndurance_key,'Content-Type':'application/json'}, data= json.dumps(ENDURANCE))
     if(update_to_endurance.status_code==201):
         logging.info("successfully updated status to endurance")
