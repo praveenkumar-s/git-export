@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:
 AHA_TOKEN=os.environ.get('AHA_TOKEN')
 ZENHUB_TOKEN=os.environ.get('ZENHUB_TOKEN')
 GITHUB_TOKEN=os.environ.get('GITHUB_TOKEN')
-
+RELEASES_AHA=None
 
 
 AHA_HEADER={'Authorization':AHA_TOKEN,'Content-Type': "application/json","User-Agent":"praveentechnic@gmail.com"}
@@ -104,6 +104,10 @@ def insertMasterFeatureAha(release_id,NAME,DESC,STATUS="Under consideration"):
             }
             }
     if(release_id != None):
+        for items in RELEASES_AHA:
+            if(RELEASES_AHA[items]['id']==release_id):
+                model['master_feature']['start_date']=RELEASES_AHA[items]['start_date']
+                model['master_feature']['due_date']=RELEASES_AHA[items]['release_date']
         rs=requests.post(url='https://qube-cinema.aha.io/api/v1/releases/{release_id}/master_features'.format(release_id=release_id),data=json.dumps(model), headers=AHA_HEADER)
         return rs
     else:
@@ -133,6 +137,8 @@ def getMasterFeatureDetailAha(id):
 #Main workflow
 def main():
     Aha_releases= getAllReleasesfromAha()
+    global RELEASES_AHA
+    RELEASES_AHA=Aha_releases
     Zen_Epics=getListOfEpicsZen()
     git_repo=github_object(GITHUB_TOKEN,config.repo_name)
     for items in Zen_Epics['epic_issues']:
@@ -191,6 +197,13 @@ def main():
                     if(getTranslationData( Aha_releases,G_Release) is not None ) :
                         if(A_release_id!=getTranslationData( Aha_releases,G_Release)['reference_num']):
                             changes['release_id']=Aha_releases[G_Release]['id']
+                if(Aha_MF['start_date']!= Aha_MF['release']['start_date']):
+                    changes['start_date']=Aha_MF['release']['start_date']
+                    
+                if(Aha_MF['due_date']!= Aha_MF['release']['release_date']):
+                    changes['due_date']=Aha_MF['release']['release_date']
+                
+
                 if(changes!={}):
                     update_response=updateMasterFeatureAha(aha_epic['aha_ref_num'],changes=changes)
                     if(update_response.status_code==200):
