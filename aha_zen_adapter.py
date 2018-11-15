@@ -10,6 +10,7 @@ import os
 import argparse
 from datetime import datetime
 import config
+import github3
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
 sys.setdefaultencoding('utf-8')
@@ -18,12 +19,21 @@ AHA_TOKEN=os.environ.get('AHA_TOKEN')
 ZENHUB_TOKEN=os.environ.get('ZENHUB_TOKEN')
 AHA_HEADER={'Authorization':AHA_TOKEN,'Content-Type': "application/json","User-Agent":"praveentechnic@gmail.com"}
 ZENHUB_HEADER={'X-Authentication-Token':ZENHUB_TOKEN}
+GITHUB_TOKEN=os.environ.get('GITHUB_TOKEN')
 map_data= json.load(open('zen2ahaMap.json'))
 
 ########################DATA_STORE##################################
-ENDURANCE= requests.get('https://ndurance.herokuapp.com/api/data_store/aha_zen', headers={'x-api-key':config.ndurance_key}).json()
+ENDURANCE= requests.get('https://ndurance.herokuapp.com/api/data_store/aha_zen_2', headers={'x-api-key':config.ndurance_key}).json()
 ############################################################
 
+
+#create an instance of github_object and return the same
+def github_object(TOKEN,repository):
+    repository=repository
+    gh = github3.GitHub(token=TOKEN)
+    owner,name=repository.split('/',1)
+    repo= gh.repository(owner,name)
+    return repo
 
 #Get all the features along with their Ids and referencenumbers
 def getFeatureListFromAha():
@@ -32,7 +42,7 @@ def getFeatureListFromAha():
     current_page=1
     
     while current_page<=total_page:
-        rs= requests.get('https://qube-cinema.aha.io/api/v1/features', params={'page':current_page} ,headers=AHA_HEADER)
+        rs= requests.get('https://qubecinema.aha.io/api/v1/features', params={'page':current_page} ,headers=AHA_HEADER)
         if(rs.status_code==200):
             feature_set=rs.json()
             for items in feature_set['features']:
@@ -56,7 +66,7 @@ def getTranslationData(jsoncontent,key):
 
 #Get Details of a given feature
 def getFeatureDetailFromAha(reference_num):
-    rs= requests.get('https://qube-cinema.aha.io/api/v1/features/'+reference_num , headers=AHA_HEADER)
+    rs= requests.get('https://qubecinema.aha.io/api/v1/features/'+reference_num , headers=AHA_HEADER)
     if(rs.status_code==200):
         return rs.json()['feature']
     elif(rs.status_code==429):
@@ -107,7 +117,7 @@ def buildEpicStoryMap(repoid):
 EPIC_MAP=buildEpicStoryMap(config.Zenhub_repo_Id)
 
 #Compare status and generate diff 
-def generatediff(Aha_feature,Zen_issue):
+def generatediff(Aha_feature,Zen_issue, Git_issue=None):
     zen=Objectifier(Zen_issue)
     Aha=Objectifier(Aha_feature)
     changes=[]
@@ -115,7 +125,7 @@ def generatediff(Aha_feature,Zen_issue):
         if(Aha.workflow_status.name != getTranslationData(map_data,zen.pipeline.name) and getTranslationData(map_data,zen.pipeline.name) is not None):
             changes.append({'workflow_status':{"name":getTranslationData(map_data,zen.pipeline.name)}})            
         if(Aha.original_estimate!=zen.estimate.value):
-            changes.append({'original_estimate':zen.estimate.value}) 
+            changes.append({'original_estimate':zen.estimate.value}) # Update Estimate
         if(zen.is_epic==False):
             try:
                 Aha_Epic=Aha.master_feature.reference_num
@@ -128,11 +138,15 @@ def generatediff(Aha_feature,Zen_issue):
             if(Aha_Epic!=Zen_Epic and Zen_Epic is not None):
                 changes.append({'master_feature':Zen_Epic})
             ####Updating start and end date as per release date:
-            if(Aha.release is not None):
+            
+            if(Aha.release is not None and config.features_source_of_release_date.lower()=='zenhub'):
                 if(Aha.release.start_date!=Aha.start_date):
                     changes.append({'start_date':Aha.release.start_date})
                 if(Aha.release.release_date!=Aha.due_date):
                     changes.append({'due_date':Aha.release.release_date})
+            elif(config.features_source_of_release_date.lower()=='github' and Git_issue is not None):
+                changes.append({'start_date':str(Git_issue.milestone.created_at.date())})
+                changes.append({'due_date':str(Git_issue.milestone.due_on.date())})
             ############################################
     except Exception as e:
         logging.error(e.message)
@@ -150,7 +164,7 @@ def update_aha(Aha_id,patchdata,skips=[], include=[]):
         
         for items in patchdata:
             update_data_schema['feature'].update(items)                
-        rs=requests.put('https://qube-cinema.aha.io/api/v1/features/{0}'.format(Aha_id), headers=AHA_HEADER , data=json.dumps(update_data_schema))
+        rs=requests.put('https://qubecinema.aha.io/api/v1/features/{0}'.format(Aha_id), headers=AHA_HEADER , data=json.dumps(update_data_schema))
         if(rs.status_code==200):
             logging.info(Aha_id+" "+str(update_data_schema))
             return 1
@@ -179,13 +193,15 @@ def main(skip=[]):
     change_log={'count':0,'errors':0,'changes':[]}
     #get feature list from aha
     FeatureList=getFeatureListFromAha()
+    git_repo=github_object(GITHUB_TOKEN,config.repo_name)
     for items in FeatureList:
         AhaFeature=getFeatureDetailFromAha(items['reference_num'])
         compound_id=str(filter(lambda types: types['name'] == 'compound_id', AhaFeature['integration_fields'])[0]['value'])
         repoId=compound_id.split('/')[0]
         issueId=compound_id.split('/')[1]
         ZenIssue=getIssueDetailFromZen(repoId,issueId)
-        diff=generatediff(AhaFeature,ZenIssue)
+        github_issue_object=git_repo.issue(issueId)
+        diff=generatediff(AhaFeature,ZenIssue, Git_issue=github_issue_object)
         state=update_aha(items['reference_num'],diff)
         if(state>0):
             change_log['count']=change_log['count']+1

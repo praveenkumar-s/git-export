@@ -27,7 +27,7 @@ ZENHUB_HEADER={'X-Authentication-Token':ZENHUB_TOKEN}
 
 
 ########################DATA_STORE##################################
-ENDURANCE= requests.get('https://ndurance.herokuapp.com/api/data_store/aha_zen', headers={'x-api-key':config.ndurance_key}).json()
+ENDURANCE= requests.get('https://ndurance.herokuapp.com/api/data_store/aha_zen_2', headers={'x-api-key':config.ndurance_key}).json()
 ############################################################
 
 #Get list of Epics from Zen hub
@@ -43,7 +43,7 @@ def getListOfEpicsZen():
 def getTranslationData(jsoncontent,key):
     try:
         return jsoncontent[key]
-    except KeyError:
+    except Exception:
         
         return None
 
@@ -72,7 +72,7 @@ def getAllReleasesfromAha():
     totalpage=10
     releases={}
     while current_page<=totalpage:
-        rs=requests.get('https://qube-cinema.aha.io/api/v1/products/{0}/releases'.format(config.product_ref),params={'page':current_page},headers=AHA_HEADER)
+        rs=requests.get('https://qubecinema.aha.io/api/v1/products/{0}/releases'.format(config.product_ref),params={'page':current_page},headers=AHA_HEADER)
         data=rs.json()
         for items in data['releases']:
             releases[items['name']]=items
@@ -85,7 +85,7 @@ def getEpicDataGit():
 
 #Get all the master features from Aha
 def getMasterFeatureAha():
-    rs=requests.get(url='https://qube-cinema.aha.io/api/v1/master_features', headers=AHA_HEADER)
+    rs=requests.get(url='https://qubecinema.aha.io/api/v1/master_features', headers=AHA_HEADER)
     if(rs.status_code==200):
         return rs.json()
     else:
@@ -93,7 +93,7 @@ def getMasterFeatureAha():
         return None
 
 #Create a new master feature on Aha
-def insertMasterFeatureAha(release_id,NAME,DESC,STATUS="Under consideration"):    
+def insertMasterFeatureAha(release_id,NAME,DESC,STATUS="Under consideration", due_date=None):    
     model={
   "master_feature": {
     "name": NAME,
@@ -103,16 +103,19 @@ def insertMasterFeatureAha(release_id,NAME,DESC,STATUS="Under consideration"):
         }
             }
             }
-    if(release_id != None):
+    if(release_id != None and config.update_release_dates):
         for items in RELEASES_AHA:
             if(RELEASES_AHA[items]['id']==release_id):
                 model['master_feature']['start_date']=RELEASES_AHA[items]['start_date']
                 model['master_feature']['due_date']=RELEASES_AHA[items]['release_date']
-        rs=requests.post(url='https://qube-cinema.aha.io/api/v1/releases/{release_id}/master_features'.format(release_id=release_id),data=json.dumps(model), headers=AHA_HEADER)
+        rs=requests.post(url='https://qubecinema.aha.io/api/v1/releases/{release_id}/master_features'.format(release_id=release_id),data=json.dumps(model), headers=AHA_HEADER)
         return rs
-    else:
-        rs=requests.post(url='https://qube-cinema.aha.io/api/v1/products/{0}/master_features'.format(config.product_id),data=json.dumps(model),headers=AHA_HEADER)
-        return rs
+
+    if(due_date!=None):
+        model['master_feature']['due_date']=due_date
+   
+    rs=requests.post(url='https://qubecinema.aha.io/api/v1/products/{0}/master_features'.format(config.product_id),data=json.dumps(model),headers=AHA_HEADER)
+    return rs
 
 
 #Update the Master feature on Aha
@@ -122,12 +125,12 @@ def updateMasterFeatureAha(id,changes={}):
     }
     for items in changes:
         model['master_feature'][items]=changes[items]
-    rs=requests.put(url='https://qube-cinema.aha.io/api/v1/master_features/{0}'.format(id), data=json.dumps(model), headers=AHA_HEADER)
+    rs=requests.put(url='https://qubecinema.aha.io/api/v1/master_features/{0}'.format(id), data=json.dumps(model), headers=AHA_HEADER)
     return rs
 
 #Get details about the master feature on Aha
 def getMasterFeatureDetailAha(id):
-    rs=requests.get('https://qube-cinema.aha.io/api/v1/master_features/{0}'.format(id), headers=AHA_HEADER)
+    rs=requests.get('https://qubecinema.aha.io/api/v1/master_features/{0}'.format(id), headers=AHA_HEADER)
     if(rs.status_code==200):
         return rs.json()
     else:
@@ -148,15 +151,22 @@ def main():
         if(aha_epic==None):
             issue=git_repo.issue(items['issue_number'])
             try:
-                release_id=Aha_releases[issue.milestone.title]['reference_num'] if issue.milestone is not None else None
+                if(config.update_release_dates):
+                    release_id=Aha_releases[issue.milestone.title]['reference_num'] if issue.milestone is not None else None
+                else:
+                    release_id=None                    
             except:
                 release_id=None
+            if(config.Track_due_date and issue.milestone is not None):
+                due_date=str(issue.milestone.due_on.date())
+            else:
+                due_date=None
             zen_issue_detail=getIssueDetailFromZen(repoid=config.Zenhub_repo_Id,issue_id=items['issue_number'])
             name=issue.title
             description=issue.body
             status=getTranslationData(json.load(open('zen2ahaMap.json')),zen_issue_detail['pipeline']['name'])            
             if(status is not None):
-                response=insertMasterFeatureAha(release_id,name,description,status)
+                response=insertMasterFeatureAha(release_id,name,description,status, due_date=due_date)
                 if(response.status_code==200):
                     this_master_feature=response.json()
                     logging.info("CREATED"+  str(this_master_feature['master_feature']['reference_num']))
@@ -193,16 +203,18 @@ def main():
                     changes['description']=G_description
                 if(A_status!=Z_status):
                     changes['workflow_status']={'name':Z_status}
-                if(G_Release !=None):
+                if(G_Release !=None and config.update_release_dates):
                     if(getTranslationData( Aha_releases,G_Release) is not None ) :
                         if(A_release_id!=getTranslationData( Aha_releases,G_Release)['reference_num']):
                             changes['release_id']=Aha_releases[G_Release]['id']
-                if(Aha_MF['start_date']!= Aha_MF['release']['start_date']):
+                if(Aha_MF['start_date']!= Aha_MF['release']['start_date'] and config.update_release_dates):
                     changes['start_date']=Aha_MF['release']['start_date']
                     
-                if(Aha_MF['due_date']!= Aha_MF['release']['release_date']):
+                if(Aha_MF['due_date']!= Aha_MF['release']['release_date'] and config.update_release_dates):
                     changes['due_date']=Aha_MF['release']['release_date']
-                
+                if(config.Track_due_date and issue.milestone is not None):
+                    if(Aha_MF['due_date']!=str(issue.milestone.due_on.date())):
+                        changes['due_date']=str(issue.milestone.due_on.date())
 
                 if(changes!={}):
                     update_response=updateMasterFeatureAha(aha_epic['aha_ref_num'],changes=changes)
@@ -216,7 +228,7 @@ def main():
                     logging.info('NO CHANGE! '+ str(aha_epic))
                     print('NO CHANGE! on ' + str(aha_epic))                            
     
-    update_to_endurance=requests.post('https://ndurance.herokuapp.com/api/data_store/aha_zen',headers={'x-api-key':config.ndurance_key,'Content-Type':'application/json'}, data= json.dumps(ENDURANCE))
+    update_to_endurance=requests.post('https://ndurance.herokuapp.com/api/data_store/aha_zen_2',headers={'x-api-key':config.ndurance_key,'Content-Type':'application/json'}, data= json.dumps(ENDURANCE))
     if(update_to_endurance.status_code==201):
         logging.info("successfully updated status to endurance")
     else:
