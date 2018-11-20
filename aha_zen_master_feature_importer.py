@@ -152,7 +152,7 @@ def main():
     git_repo=github_object(GITHUB_TOKEN,config.repo_name)
     for items in Zen_Epics['epic_issues']:
         #check if item is available in Endurance:
-        print 'processing: '+str(items)
+        print('processing: '+str(items))
         aha_epic=getTranslationData(ENDURANCE,str(items['issue_number']))
         if(aha_epic==None):
             issue=git_repo.issue(items['issue_number'])
@@ -181,10 +181,10 @@ def main():
                     }
                 else:
                     #TODO log Error Failure
-                    print response.status_code
+                    print(response.status_code)
             else:
                 #TODO Log error for status not available
-                print ' status un available'
+                print(' status un available')
                 pass
         else:
             #TODO Logic for updating the Master feature
@@ -227,7 +227,7 @@ def main():
                     if(update_response.status_code==200):
                         
                         logging.info("UPDATED"+str(aha_epic)+str(changes))
-                        print "updated!:  "+ str(aha_epic) + str(changes)
+                        print("updated!:  "+ str(aha_epic) + str(changes))
                         final_Changes.append("updated!:  "+ str(aha_epic) + str(changes))
                     else:
                         logging.error("Error while updating.."+ str(update_response.status_code)+ str(update_response.content))
