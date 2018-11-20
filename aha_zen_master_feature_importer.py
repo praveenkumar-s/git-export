@@ -134,7 +134,7 @@ def updateMasterFeatureAha(id,changes={}):
 
 #Get details about the master feature on Aha
 def getMasterFeatureDetailAha(id):
-    rs=requests.get( url=config.Aha_Domain,'api/v1/master_features/{0}'.format(id), headers=AHA_HEADER)
+    rs=requests.get( url=config.Aha_Domain,path='api/v1/master_features/{0}'.format(id), headers=AHA_HEADER)
     if(rs.status_code==200):
         return rs.json()
     else:
