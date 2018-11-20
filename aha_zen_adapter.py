@@ -156,7 +156,7 @@ def generatediff(Aha_feature,Zen_issue, Git_issue=None):
                 changes.append({'due_date':str(Git_issue.milestone.due_on.date())})
             ############################################
     except Exception as e:
-        logging.error(e.message)
+        logging.error(str(e))
     return changes
 
 #Update details on to aha and Log the same in detail    
@@ -203,7 +203,7 @@ def main(skip=[]):
     git_repo=github_object(GITHUB_TOKEN,config.repo_name)
     for items in FeatureList:
         AhaFeature=getFeatureDetailFromAha(items['reference_num'])
-        compound_id=str(filter(lambda types: types['name'] == 'compound_id', AhaFeature['integration_fields'])[0]['value'])
+        compound_id=str(list( filter(lambda types: types['name'] == 'compound_id', AhaFeature['integration_fields']) )[0]['value'])
         repoId=compound_id.split('/')[0]
         issueId=compound_id.split('/')[1]
         ZenIssue=getIssueDetailFromZen(repoId,issueId)
