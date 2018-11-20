@@ -1,7 +1,6 @@
 import requests
 import sys
 import json
-reload(sys)
 from autologging import logged,traced,TRACE 
 import logging
 import time
