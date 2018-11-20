@@ -12,7 +12,11 @@ from datetime import datetime
 import github3
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
-sys.setdefaultencoding('utf-8')
+if sys.version[0] == '2':
+    reload(sys)
+    sys.setdefaultencoding("utf-8")
+
+
 config= json.loads(os.environ.get('config'))
 config=Objectifier(config)
 

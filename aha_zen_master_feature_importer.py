@@ -13,7 +13,9 @@ config= json.loads(os.environ.get('config'))
 config=Objectifier(config)
 
 logging.basicConfig(level=logging.INFO,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s",filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
-
+if sys.version[0] == '2':
+    reload(sys)
+    sys.setdefaultencoding("utf-8")
 
 
 
