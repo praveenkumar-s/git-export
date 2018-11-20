@@ -213,11 +213,5 @@ def main(skip=[]):
             change_log['errors']=change_log['errors']+1
         change_log['changes'].append({items['reference_num']:diff})
     logging.info(str(change_log))
+    return change_log['changes']
 
-
-if __name__ == '__main__':
-    if(AHA_TOKEN==None or AHA_HEADER==None):
-        logging.error("Tokens not set, set AHA_TOKEN and  AHA_HEADER as environment variables")
-        sys.exit(1)
-    arg=arg_parser().parse_args()
-    main(arg.skip)
