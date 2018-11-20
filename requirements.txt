@@ -3,3 +3,4 @@ requests==2.19.1
 progressbar2==3.38.0
 pyrebase==3.0.27
 autologging==1.2.1
+objectifier==1.4.0
