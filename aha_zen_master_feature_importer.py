@@ -12,7 +12,7 @@ import urlparse
 config= json.loads(os.environ.get('config'))
 config=Objectifier(config)
 
-logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s",filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
+logging.basicConfig(level=logging.INFO,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s",filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
 
 
 
@@ -142,6 +142,7 @@ def getMasterFeatureDetailAha(id):
 
 #Main workflow
 def main():
+    final_Changes=[]
     Aha_releases= getAllReleasesfromAha()
     global RELEASES_AHA
     RELEASES_AHA=Aha_releases
@@ -225,6 +226,7 @@ def main():
                         
                         logging.info("UPDATED"+str(aha_epic)+str(changes))
                         print "updated!:  "+ str(aha_epic) + str(changes)
+                        final_Changes.append("updated!:  "+ str(aha_epic) + str(changes))
                     else:
                         logging.error("Error while updating.."+ str(update_response.status_code)+ str(update_response.content))
                 else:
@@ -237,6 +239,6 @@ def main():
     else:
         logging.error("Non 200 code from ndurance"+str(update_to_endurance.status_code))
     
-
-main()
+    return final_Changes
+#main()
 ##end

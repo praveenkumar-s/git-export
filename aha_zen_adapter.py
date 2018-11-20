@@ -11,7 +11,7 @@ from datetime import datetime
 #import config
 import github3
 
-logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
 sys.setdefaultencoding('utf-8')
 config= json.loads(os.environ.get('config'))
 config=Objectifier(config)
