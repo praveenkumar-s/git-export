@@ -1,5 +1,5 @@
 import requests
-import config
+#import config
 import os
 import json
 from objectifier import Objectifier
@@ -8,15 +8,18 @@ from autologging import logged,traced,TRACE
 import logging
 import sys
 from datetime import datetime
+import urlparse
+config= json.loads(os.environ.get('config'))
+config=Objectifier(config)
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s",filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
 
 
 
 
-AHA_TOKEN=os.environ.get('AHA_TOKEN')
-ZENHUB_TOKEN=os.environ.get('ZENHUB_TOKEN')
-GITHUB_TOKEN=os.environ.get('GITHUB_TOKEN')
+AHA_TOKEN=config.AHA_TOKEN
+ZENHUB_TOKEN=config.ZENHUB_TOKEN
+GITHUB_TOKEN=config.GITHUB_TOKEN
 RELEASES_AHA=None
 
 
@@ -27,12 +30,12 @@ ZENHUB_HEADER={'X-Authentication-Token':ZENHUB_TOKEN}
 
 
 ########################DATA_STORE##################################
-ENDURANCE= requests.get('https://ndurance.herokuapp.com/api/data_store/aha_zen_2', headers={'x-api-key':config.ndurance_key}).json()
+ENDURANCE= requests.get(config.Endurance_Source, headers={'x-api-key':config.ndurance_key}).json()
 ############################################################
 
 #Get list of Epics from Zen hub
 def getListOfEpicsZen():
-    rs=requests.get(url='https://api.zenhub.io/p1/repositories/{0}/epics'.format(config.Zenhub_repo_Id),headers=ZENHUB_HEADER)
+    rs=requests.get(url=  urlparse.urljoin(config.Zenhub_Domain,'/p1/repositories/{0}/epics'.format(config.Zenhub_repo_Id)),headers=ZENHUB_HEADER)
     if(rs.status_code==200):
         return rs.json()
     else:
@@ -57,7 +60,7 @@ def github_object(TOKEN,repository):
 
 #Get Details of an issue from Zenhub
 def getIssueDetailFromZen(repoid,issue_id):
-    rs= requests.get('https://api.zenhub.io/p1/repositories/{0}/issues/{1}'.format(str(repoid),str(issue_id)),headers=ZENHUB_HEADER)
+    rs= requests.get(urlparse.urljoin(config.Zenhub_Domain,'/p1/repositories/{0}/issues/{1}'.format(str(repoid),str(issue_id))),headers=ZENHUB_HEADER)
     if(rs.status_code==200):
         result= rs.json()
         result['id']=issue_id
@@ -72,7 +75,7 @@ def getAllReleasesfromAha():
     totalpage=10
     releases={}
     while current_page<=totalpage:
-        rs=requests.get('https://qubecinema.aha.io/api/v1/products/{0}/releases'.format(config.product_ref),params={'page':current_page},headers=AHA_HEADER)
+        rs=requests.get(urlparse.urljoin( config.Aha_Domain,'/api/v1/products/{0}/releases'.format(config.product_ref)),params={'page':current_page},headers=AHA_HEADER)
         data=rs.json()
         for items in data['releases']:
             releases[items['name']]=items
@@ -85,7 +88,7 @@ def getEpicDataGit():
 
 #Get all the master features from Aha
 def getMasterFeatureAha():
-    rs=requests.get(url='https://qubecinema.aha.io/api/v1/master_features', headers=AHA_HEADER)
+    rs=requests.get(url= urlparse.urljoin( config.Aha_Domain,'api/v1/master_features'), headers=AHA_HEADER)
     if(rs.status_code==200):
         return rs.json()
     else:
@@ -108,13 +111,13 @@ def insertMasterFeatureAha(release_id,NAME,DESC,STATUS="Under consideration", du
             if(RELEASES_AHA[items]['id']==release_id):
                 model['master_feature']['start_date']=RELEASES_AHA[items]['start_date']
                 model['master_feature']['due_date']=RELEASES_AHA[items]['release_date']
-        rs=requests.post(url='https://qubecinema.aha.io/api/v1/releases/{release_id}/master_features'.format(release_id=release_id),data=json.dumps(model), headers=AHA_HEADER)
+        rs=requests.post(url=urlparse.urljoin( config.Aha_Domain ,'api/v1/releases/{release_id}/master_features'.format(release_id=release_id)),data=json.dumps(model), headers=AHA_HEADER)
         return rs
 
     if(due_date!=None):
         model['master_feature']['due_date']=due_date
    
-    rs=requests.post(url='https://qubecinema.aha.io/api/v1/products/{0}/master_features'.format(config.product_id),data=json.dumps(model),headers=AHA_HEADER)
+    rs=requests.post(url= urlparse.urljoin(config.Aha_Domain,'api/v1/products/{0}/master_features'.format(config.product_id)),data=json.dumps(model),headers=AHA_HEADER)
     return rs
 
 
@@ -125,12 +128,12 @@ def updateMasterFeatureAha(id,changes={}):
     }
     for items in changes:
         model['master_feature'][items]=changes[items]
-    rs=requests.put(url='https://qubecinema.aha.io/api/v1/master_features/{0}'.format(id), data=json.dumps(model), headers=AHA_HEADER)
+    rs=requests.put(url= urlparse.urljoin(config.Aha_Domain,'api/v1/master_features/{0}'.format(id)), data=json.dumps(model), headers=AHA_HEADER)
     return rs
 
 #Get details about the master feature on Aha
 def getMasterFeatureDetailAha(id):
-    rs=requests.get('https://qubecinema.aha.io/api/v1/master_features/{0}'.format(id), headers=AHA_HEADER)
+    rs=requests.get( urlparse.urljoin( config.Aha_Domain,'api/v1/master_features/{0}'.format(id)), headers=AHA_HEADER)
     if(rs.status_code==200):
         return rs.json()
     else:
@@ -228,7 +231,7 @@ def main():
                     logging.info('NO CHANGE! '+ str(aha_epic))
                     print('NO CHANGE! on ' + str(aha_epic))                            
     
-    update_to_endurance=requests.post('https://ndurance.herokuapp.com/api/data_store/aha_zen_2',headers={'x-api-key':config.ndurance_key,'Content-Type':'application/json'}, data= json.dumps(ENDURANCE))
+    update_to_endurance=requests.post(config.Endurance_Source,headers={'x-api-key':config.ndurance_key,'Content-Type':'application/json'}, data= json.dumps(ENDURANCE))
     if(update_to_endurance.status_code==201):
         logging.info("successfully updated status to endurance")
     else:

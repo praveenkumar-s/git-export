@@ -9,17 +9,21 @@ from objectifier import Objectifier
 import os
 import argparse
 from datetime import datetime
-import config
+#import config
 import github3
 
 logging.basicConfig(level=logging.INFO, stream=sys.stderr,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
 sys.setdefaultencoding('utf-8')
+config= json.loads(os.environ.get('config'))
+config=Objectifier(config)
 
-AHA_TOKEN=os.environ.get('AHA_TOKEN')
-ZENHUB_TOKEN=os.environ.get('ZENHUB_TOKEN')
+
+AHA_TOKEN=config.AHA_TOKEN
+ZENHUB_TOKEN=config.ZENHUB_TOKEN
 AHA_HEADER={'Authorization':AHA_TOKEN,'Content-Type': "application/json","User-Agent":"praveentechnic@gmail.com"}
 ZENHUB_HEADER={'X-Authentication-Token':ZENHUB_TOKEN}
-GITHUB_TOKEN=os.environ.get('GITHUB_TOKEN')
+GITHUB_TOKEN=config.GITHUB_TOKEN
+
 map_data= json.load(open('zen2ahaMap.json'))
 
 ########################DATA_STORE##################################
