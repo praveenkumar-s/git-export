@@ -15,3 +15,12 @@ def send_message(message):
     response = requests.request("GET", url, params=querystring)
 
     print(response.text)
+
+def features_format_message(feature_update):
+    finalstr=''
+    for items in feature_update:
+        k=list(items.keys())[0]
+        if(len(items[k])!=0):
+            finalstr=finalstr+' '+k+' -->  '+str(items[k])+'\n'
+
+    return(finalstr)

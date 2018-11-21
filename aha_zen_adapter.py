@@ -10,11 +10,10 @@ import argparse
 from datetime import datetime
 #import config
 import github3
+from urllib.parse import urljoin
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
-if sys.version[0] == '2':
-    reload(sys)
-    sys.setdefaultencoding("utf-8")
+
 
 
 config= json.loads(os.environ.get('config'))
@@ -30,8 +29,8 @@ GITHUB_TOKEN=config.GITHUB_TOKEN
 map_data= json.load(open('zen2ahaMap.json'))
 
 ########################DATA_STORE##################################
-ENDURANCE= requests.get('https://ndurance.herokuapp.com/api/data_store/aha_zen_2', headers={'x-api-key':config.ndurance_key}).json()
-############################################################
+ENDURANCE= requests.get(config.Endurance_Source, headers={'x-api-key':config.ndurance_key}).json()
+####################################################################
 
 
 #create an instance of github_object and return the same
@@ -49,7 +48,7 @@ def getFeatureListFromAha():
     current_page=1
     
     while current_page<=total_page:
-        rs= requests.get('https://qubecinema.aha.io/api/v1/features', params={'page':current_page} ,headers=AHA_HEADER)
+        rs= requests.get(urljoin(config.Aha_Domain,'/api/v1/features'), params={'page':current_page} ,headers=AHA_HEADER)
         if(rs.status_code==200):
             feature_set=rs.json()
             for items in feature_set['features']:
@@ -73,7 +72,7 @@ def getTranslationData(jsoncontent,key):
 
 #Get Details of a given feature
 def getFeatureDetailFromAha(reference_num):
-    rs= requests.get('https://qubecinema.aha.io/api/v1/features/'+reference_num , headers=AHA_HEADER)
+    rs= requests.get(urljoin(config.Aha_Domain,'/api/v1/features/'+reference_num) , headers=AHA_HEADER)
     if(rs.status_code==200):
         return rs.json()['feature']
     elif(rs.status_code==429):
@@ -86,7 +85,7 @@ def getFeatureDetailFromAha(reference_num):
 
 #Get Details for a given issue from Zen
 def getIssueDetailFromZen(repoid,issue_id):
-    rs= requests.get('https://api.zenhub.io/p1/repositories/{0}/issues/{1}'.format(str(repoid),str(issue_id)),headers=ZENHUB_HEADER)
+    rs= requests.get(urljoin(config.Zenhub_Domain,'/p1/repositories/{0}/issues/{1}'.format(str(repoid),str(issue_id))),headers=ZENHUB_HEADER)
     if(rs.status_code==200):
         result= rs.json()
         result['id']=issue_id
@@ -97,7 +96,7 @@ def getIssueDetailFromZen(repoid,issue_id):
 
 
 def getEpicDetailfromZen(repoid,epic_id):
-    rs=requests.get('https://api.zenhub.io/p1/repositories/{0}/epics/{1}'.format(repoid,epic_id),headers=ZENHUB_HEADER)
+    rs=requests.get(urljoin(config.Zenhub_Domain,'/p1/repositories/{0}/epics/{1}'.format(repoid,epic_id)),headers=ZENHUB_HEADER)
     if(rs.status_code==200):
         return rs.json()
     elif(rs.staus_code==429):
@@ -111,7 +110,7 @@ def getEpicDetailfromZen(repoid,epic_id):
 def buildEpicStoryMap(repoid):
     All_Epics=None
     issue_epic_map={}
-    rs=requests.get('https://api.zenhub.io/p1/repositories/{0}/epics/'.format(repoid),headers=ZENHUB_HEADER)
+    rs=requests.get(urljoin(config.Zenhub_Domain,'/p1/repositories/{0}/epics/'.format(repoid)),headers=ZENHUB_HEADER)
     if(rs.status_code==200):
         All_Epics=rs.json()
     for items in All_Epics['epic_issues']:
@@ -124,7 +123,7 @@ def buildEpicStoryMap(repoid):
 EPIC_MAP=buildEpicStoryMap(config.Zenhub_repo_Id)
 
 #Compare status and generate diff 
-def generatediff(Aha_feature,Zen_issue, Git_issue=None):
+def generatediff(Aha_feature,Zen_issue, Git_issue=None , repo_id=None):
     zen=Objectifier(Zen_issue)
     Aha=Objectifier(Aha_feature)
     changes=[]
@@ -151,8 +150,8 @@ def generatediff(Aha_feature,Zen_issue, Git_issue=None):
                     changes.append({'start_date':Aha.release.start_date})
                 if(Aha.release.release_date!=Aha.due_date):
                     changes.append({'due_date':Aha.release.release_date})
-            elif(config.features_source_of_release_date.lower()=='github' and Git_issue is not None):
-                changes.append({'start_date':str(Git_issue.milestone.created_at.date())})
+            elif(config.features_source_of_release_date.lower()=='github' and Git_issue is not None and Git_issue.milestone is not None):
+                changes.append({'start_date':get_milestone_start_date_from_zen(repo_id,Git_issue.milestone.number).split('T')[0]})
                 changes.append({'due_date':str(Git_issue.milestone.due_on.date())})
             ############################################
     except Exception as e:
@@ -171,7 +170,7 @@ def update_aha(Aha_id,patchdata,skips=[], include=[]):
         
         for items in patchdata:
             update_data_schema['feature'].update(items)                
-        rs=requests.put('https://qubecinema.aha.io/api/v1/features/{0}'.format(Aha_id), headers=AHA_HEADER , data=json.dumps(update_data_schema))
+        rs=requests.put(urljoin(config.Aha_Domain,'/api/v1/features/{0}'.format(Aha_id)), headers=AHA_HEADER , data=json.dumps(update_data_schema))
         if(rs.status_code==200):
             logging.info(Aha_id+" "+str(update_data_schema))
             return 1
@@ -196,6 +195,15 @@ def arg_parser():
 
 
 
+def get_milestone_start_date_from_zen(repo_id,milestone_number):
+    rs= requests.get(urljoin(config.Zenhub_Domain,'p1/repositories/{0}/milestones/{1}/start_date'.format(repo_id,milestone_number)), headers=ZENHUB_HEADER)
+    if(rs.status_code==200):
+        return rs.json()['start_date']
+    else:
+        return None
+
+
+
 def main(skip=[]):
     change_log={'count':0,'errors':0,'changes':[]}
     #get feature list from aha
@@ -208,7 +216,7 @@ def main(skip=[]):
         issueId=compound_id.split('/')[1]
         ZenIssue=getIssueDetailFromZen(repoId,issueId)
         github_issue_object=git_repo.issue(issueId)
-        diff=generatediff(AhaFeature,ZenIssue, Git_issue=github_issue_object)
+        diff=generatediff(AhaFeature,ZenIssue, Git_issue=github_issue_object, repo_id= repoId)
         state=update_aha(items['reference_num'],diff)
         if(state>0):
             change_log['count']=change_log['count']+1

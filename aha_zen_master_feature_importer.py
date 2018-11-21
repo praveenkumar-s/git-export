@@ -10,11 +10,11 @@ import sys
 from datetime import datetime
 config= json.loads(os.environ.get('config'))
 config=Objectifier(config)
+from urllib.parse import urljoin
+
 
 logging.basicConfig(level=logging.INFO,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s",filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
-if sys.version[0] == '2':
-    reload(sys)
-    sys.setdefaultencoding("utf-8")
+
 
 
 
@@ -36,7 +36,7 @@ ENDURANCE= requests.get(config.Endurance_Source, headers={'x-api-key':config.ndu
 
 #Get list of Epics from Zen hub
 def getListOfEpicsZen():
-    rs=requests.get(url=  urlparse.urljoin(config.Zenhub_Domain,'/p1/repositories/{0}/epics'.format(config.Zenhub_repo_Id)),headers=ZENHUB_HEADER)
+    rs=requests.get(url= urljoin(config.Zenhub_Domain,'/p1/repositories/{0}/epics'.format(config.Zenhub_repo_Id)),headers=ZENHUB_HEADER)
     if(rs.status_code==200):
         return rs.json()
     else:
@@ -61,7 +61,7 @@ def github_object(TOKEN,repository):
 
 #Get Details of an issue from Zenhub
 def getIssueDetailFromZen(repoid,issue_id):
-    rs= requests.get(url=config.Zenhub_Domain,path='/p1/repositories/{0}/issues/{1}'.format(str(repoid),str(issue_id)),headers=ZENHUB_HEADER)
+    rs= requests.get(url= urljoin(config.Zenhub_Domain,'/p1/repositories/{0}/issues/{1}'.format(str(repoid),str(issue_id))),headers=ZENHUB_HEADER)
     if(rs.status_code==200):
         result= rs.json()
         result['id']=issue_id
@@ -76,7 +76,7 @@ def getAllReleasesfromAha():
     totalpage=10
     releases={}
     while current_page<=totalpage:
-        rs=requests.get(url=config.Aha_Domain,path='/api/v1/products/{0}/releases'.format(config.product_ref),params={'page':current_page},headers=AHA_HEADER)
+        rs=requests.get(url= urljoin(config.Aha_Domain,'/api/v1/products/{0}/releases'.format(config.product_ref)),params={'page':current_page},headers=AHA_HEADER)
         data=rs.json()
         for items in data['releases']:
             releases[items['name']]=items
@@ -89,7 +89,7 @@ def getEpicDataGit():
 
 #Get all the master features from Aha
 def getMasterFeatureAha():
-    rs=requests.get(url=  config.Aha_Domain,path='api/v1/master_features', headers=AHA_HEADER)
+    rs=requests.get(url=  urljoin(config.Aha_Domain,'api/v1/master_features'), headers=AHA_HEADER)
     if(rs.status_code==200):
         return rs.json()
     else:
@@ -112,13 +112,13 @@ def insertMasterFeatureAha(release_id,NAME,DESC,STATUS="Under consideration", du
             if(RELEASES_AHA[items]['id']==release_id):
                 model['master_feature']['start_date']=RELEASES_AHA[items]['start_date']
                 model['master_feature']['due_date']=RELEASES_AHA[items]['release_date']
-        rs=requests.post(url=config.Aha_Domain ,path='api/v1/releases/{release_id}/master_features'.format(release_id=release_id),data=json.dumps(model), headers=AHA_HEADER)
+        rs=requests.post(url= urljoin(config.Aha_Domain ,'api/v1/releases/{release_id}/master_features'.format(release_id=release_id)),data=json.dumps(model), headers=AHA_HEADER)
         return rs
 
     if(due_date!=None):
         model['master_feature']['due_date']=due_date
    
-    rs=requests.post(url= config.Aha_Domain,path='api/v1/products/{0}/master_features'.format(config.product_id),data=json.dumps(model),headers=AHA_HEADER)
+    rs=requests.post(url= urljoin(config.Aha_Domain,'api/v1/products/{0}/master_features'.format(config.product_id)),data=json.dumps(model),headers=AHA_HEADER)
     return rs
 
 
@@ -129,12 +129,12 @@ def updateMasterFeatureAha(id,changes={}):
     }
     for items in changes:
         model['master_feature'][items]=changes[items]
-    rs=requests.put(url= config.Aha_Domain,path='api/v1/master_features/{0}'.format(id), data=json.dumps(model), headers=AHA_HEADER)
+    rs=requests.put(url= urljoin(config.Aha_Domain,'api/v1/master_features/{0}'.format(id)), data=json.dumps(model), headers=AHA_HEADER)
     return rs
 
 #Get details about the master feature on Aha
 def getMasterFeatureDetailAha(id):
-    rs=requests.get( url=config.Aha_Domain,path='api/v1/master_features/{0}'.format(id), headers=AHA_HEADER)
+    rs=requests.get( url= urljoin( config.Aha_Domain,'api/v1/master_features/{0}'.format(id)), headers=AHA_HEADER)
     if(rs.status_code==200):
         return rs.json()
     else:
