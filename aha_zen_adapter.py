@@ -41,7 +41,7 @@ def github_object(TOKEN,repository):
     repo= gh.repository(owner,name)
     return repo
 
-#Get all the features along with their Ids and referencenumbers
+#Get all the features along with their Ids and referencenumbers  | Rate limit protection : False
 def getFeatureListFromAha():
     features=[] 
     total_page=9
@@ -70,7 +70,7 @@ def getTranslationData(jsoncontent,key):
         return None
 
 
-#Get Details of a given feature
+#Get Details of a given feature  | Rate limit protection : True
 def getFeatureDetailFromAha(reference_num):
     rs= requests.get(urljoin(config.Aha_Domain,'/api/v1/features/'+reference_num) , headers=AHA_HEADER)
     if(rs.status_code==200):
@@ -83,23 +83,27 @@ def getFeatureDetailFromAha(reference_num):
         return None
 
 
-#Get Details for a given issue from Zen
+#Get Details for a given issue from Zen  | Rate limit protection : True
 def getIssueDetailFromZen(repoid,issue_id):
-    rs= requests.get(urljoin(config.Zenhub_Domain,'/p1/repositories/{0}/issues/{1}'.format(str(repoid),str(issue_id))),headers=ZENHUB_HEADER)
+    rs= requests.get(urljoin(config.Zenhub_Domain,'/p1/repositories/{0}/issues/{1}'.format(str(repoid),str(issue_id))),headers=ZENHUB_HEADER )
     if(rs.status_code==200):
         result= rs.json()
         result['id']=issue_id
         return result
+    elif(rs.status_code==429):
+        time.sleep(5)
+        return getIssueDetailFromZen(repoid,issue_id)
     else:
         #Log error
         return None
 
 
-def getEpicDetailfromZen(repoid,epic_id):
+#Get details of an epic from Zenhub | Rate limit protection : True
+def getEpicDetailfromZen(repoid,epic_id): 
     rs=requests.get(urljoin(config.Zenhub_Domain,'/p1/repositories/{0}/epics/{1}'.format(repoid,epic_id)),headers=ZENHUB_HEADER)
     if(rs.status_code==200):
         return rs.json()
-    elif(rs.staus_code==429):
+    elif(rs.status_code==429):
         #handle ratelimit
         time.sleep(10)
         return getEpicDetailfromZen(repoid,epic_id)
