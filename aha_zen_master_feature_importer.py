@@ -40,7 +40,7 @@ def getListOfEpicsZen():
     if(rs.status_code==200):
         return rs.json()
     else:
-        logging.error("Failure While Fetching details from Zenhub"+ str(rs.status_code)+ str(rs.content))
+        print("Failure While Fetching details from Zenhub"+ str(rs.status_code)+ str(rs.content))
         return None
 
 #Get Translation data - handle key errors internally
