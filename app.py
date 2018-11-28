@@ -5,7 +5,7 @@ import requests
 from datetime import datetime
 
 def upload_to_storage(data):
-    rs=requests.post('https://funteam.herokuapp.com/insertresults', data= str(data))
+    rs=requests.post('https://funteam.herokuapp.com/insertresults', data= str(data)+ '     \n This Ran @ : '+str(datetime.now()))
     if(rs.status_code==200):
         return 'https://funteam.herokuapp.com/getautomationresults?key='+str(rs.content)
     else:

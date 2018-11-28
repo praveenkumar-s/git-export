@@ -11,7 +11,7 @@ def send_message(message):
 
     querystring = {"token":token,"channel":"@praveenkumar.s","text":message,"username":"Aha_Syncer","parse":"full","link_names":"1"}
 
-
+    print(message)
     response = requests.request("GET", url, params=querystring)
 
     print(response.text)

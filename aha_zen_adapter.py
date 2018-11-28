@@ -41,13 +41,14 @@ def github_object(TOKEN,repository):
     repo= gh.repository(owner,name)
     return repo
 
-#Get all the features along with their Ids and referencenumbers  | Rate limit protection : False
+#Get all the features along with their Ids and referencenumbers  | Rate limit protection : True
 def getFeatureListFromAha():
     features=[] 
     total_page=9
     current_page=1
     
     while current_page<=total_page:
+        time.sleep(0.5)
         rs= requests.get(urljoin(config.Aha_Domain,'/api/v1/features'), params={'page':current_page} ,headers=AHA_HEADER)
         if(rs.status_code==200):
             feature_set=rs.json()
@@ -55,6 +56,8 @@ def getFeatureListFromAha():
                 features.append(items)
             current_page=feature_set['pagination']['current_page'] + 1
             total_page=feature_set['pagination']['total_pages']
+        elif(rs.status_code==429):
+            time.sleep(10)
         else:
             logging.error('Non 200 error code thrown '+ str(rs.status_code))
             #handle failures
@@ -70,7 +73,7 @@ def getTranslationData(jsoncontent,key):
         return None
 
 
-#Get Details of a given feature  | Rate limit protection : True
+#Get Details of a given feature  from Aha | Rate limit protection : True
 def getFeatureDetailFromAha(reference_num):
     rs= requests.get(urljoin(config.Aha_Domain,'/api/v1/features/'+reference_num) , headers=AHA_HEADER)
     if(rs.status_code==200):
@@ -91,7 +94,7 @@ def getIssueDetailFromZen(repoid,issue_id):
         result['id']=issue_id
         return result
     elif(rs.status_code==429):
-        time.sleep(5)
+        time.sleep(10)
         return getIssueDetailFromZen(repoid,issue_id)
     else:
         #Log error
@@ -162,8 +165,9 @@ def generatediff(Aha_feature,Zen_issue, Git_issue=None , repo_id=None):
         logging.error(str(e))
     return changes
 
-#Update details on to aha and Log the same in detail    
+#Update details on to aha and Log the same in detail  | Rate Limit : Cant make more than 1 request per second  
 def update_aha(Aha_id,patchdata,skips=[], include=[]):
+    time.sleep(1)
     update_data_schema={
         "feature":{}
     }
