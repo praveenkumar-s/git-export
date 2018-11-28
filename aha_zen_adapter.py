@@ -12,8 +12,10 @@ from datetime import datetime
 import github3
 from urllib.parse import urljoin
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
-
+logging.basicConfig(level=logging.INFO,
+ format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", 
+  handlers=[logging.StreamHandler()])
+logger=logging.getLogger()
 
 
 config= json.loads(os.environ.get('config'))
@@ -49,7 +51,7 @@ def getFeatureListFromAha():
     
     while current_page<=total_page:
         time.sleep(0.5)
-        rs= requests.get(urljoin(config.Aha_Domain,'/api/v1/features'), params={'page':current_page} ,headers=AHA_HEADER)
+        rs= requests.get(urljoin(config.Aha_Domain,'/api/v1/products/{product_id}/features'.format(product_id=config.product_id)), params={'page':current_page} ,headers=AHA_HEADER)
         if(rs.status_code==200):
             feature_set=rs.json()
             for items in feature_set['features']:
@@ -57,11 +59,16 @@ def getFeatureListFromAha():
             current_page=feature_set['pagination']['current_page'] + 1
             total_page=feature_set['pagination']['total_pages']
         elif(rs.status_code==429):
+            logger.error('Rate limited at Aha! sleeping for 10 seconds')
             time.sleep(10)
+        elif(rs.status_code==403):
+            logger.error('Authentication Failure at Aha! Stopping process')
+            sys.exit(1)
         else:
-            logging.error('Non 200 error code thrown '+ str(rs.status_code))
-            #handle failures
-
+            logger.error('Non 200 error code returned by Aha! {0}'.format(str(rs.status_code)))
+            sys.exit(1)
+            
+    logger.info('returned Features Array {0}'.format(str(len(features))))
     return features
 
 #Get Translation data
@@ -80,6 +87,7 @@ def getFeatureDetailFromAha(reference_num):
         return rs.json()['feature']
     elif(rs.status_code==429):
         #Handle Ratelimits
+        logger.error('Encountered Rate Limit while getting issue detail from Aha! , sleeping 10 secs')
         time.sleep(10)
         return getFeatureDetailFromAha(reference_num)
     else:
@@ -94,6 +102,7 @@ def getIssueDetailFromZen(repoid,issue_id):
         result['id']=issue_id
         return result
     elif(rs.status_code==429):
+        logger.error('Encountered Rate Limit while getting Issue detail from Zen! sleeping 10 secs')
         time.sleep(10)
         return getIssueDetailFromZen(repoid,issue_id)
     else:
@@ -162,7 +171,7 @@ def generatediff(Aha_feature,Zen_issue, Git_issue=None , repo_id=None):
                 changes.append({'due_date':str(Git_issue.milestone.due_on.date())})
             ############################################
     except Exception as e:
-        logging.error(str(e))
+        pass
     return changes
 
 #Update details on to aha and Log the same in detail  | Rate Limit : Cant make more than 1 request per second  
@@ -172,7 +181,7 @@ def update_aha(Aha_id,patchdata,skips=[], include=[]):
         "feature":{}
     }
     if(len(patchdata)==0):
-        logging.info(Aha_id+"  No Update found!")
+        logger.info(Aha_id+"  No Update found!")
         return 0
     elif(Aha_id not in skips):# and Aha_id=='QS-13'):
         
@@ -180,10 +189,10 @@ def update_aha(Aha_id,patchdata,skips=[], include=[]):
             update_data_schema['feature'].update(items)                
         rs=requests.put(urljoin(config.Aha_Domain,'/api/v1/features/{0}'.format(Aha_id)), headers=AHA_HEADER , data=json.dumps(update_data_schema))
         if(rs.status_code==200):
-            logging.info(Aha_id+" "+str(update_data_schema))
+            logger.info(Aha_id+" "+str(update_data_schema))
             return 1
         else:
-            logging.error(Aha_id+' Oops something Went wrong while updating'+ str(rs.status_code)+' '+ json.dumps(update_data_schema))
+            logger.error(Aha_id+' Oops something Went wrong while updating'+ str(rs.status_code)+' '+ json.dumps(update_data_schema))
             return -1
     #REMOVE THIS
     else:
@@ -231,6 +240,6 @@ def main(skip=[]):
         elif(state<0):
             change_log['errors']=change_log['errors']+1
         change_log['changes'].append({items['reference_num']:diff})
-    logging.info(str(change_log))
+    logger.info(str(change_log))
     return change_log['changes']
 

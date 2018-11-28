@@ -11,10 +11,13 @@ from datetime import datetime
 config= json.loads(os.environ.get('config'))
 config=Objectifier(config)
 from urllib.parse import urljoin
+import time
 
 
-logging.basicConfig(level=logging.INFO,format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s",filename=str(datetime.now()).replace(':','_').replace('.','_')+'.log', filemode='w')
-
+logging.basicConfig(level=logging.INFO,
+ format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", 
+  handlers=[logging.StreamHandler()])
+logger=logging.getLogger()
 
 
 
@@ -40,7 +43,7 @@ def getListOfEpicsZen():
     if(rs.status_code==200):
         return rs.json()
     else:
-        print("Failure While Fetching details from Zenhub"+ str(rs.status_code)+ str(rs.content))
+        logger.error("Failure While Fetching details from Zenhub"+ str(rs.status_code)+ str(rs.content))
         return None
 
 #Get Translation data - handle key errors internally
@@ -76,12 +79,20 @@ def getAllReleasesfromAha():
     totalpage=10
     releases={}
     while current_page<=totalpage:
+        time.sleep(.25)
         rs=requests.get(url= urljoin(config.Aha_Domain,'/api/v1/products/{0}/releases'.format(config.product_ref)),params={'page':current_page},headers=AHA_HEADER)
-        data=rs.json()
-        for items in data['releases']:
-            releases[items['name']]=items
-        totalpage=data['pagination']['total_pages']
-        current_page=current_page+1
+        if(rs.status_code==200):
+            data=rs.json()
+            for items in data['releases']:
+                releases[items['name']]=items
+            totalpage=data['pagination']['total_pages']
+            current_page=current_page+1
+        elif(rs.status_code==429):
+            logger.error('hit Rate Limit while getting release details. Sleeping 10 secs')
+            time.sleep(10)
+        else:
+            logger.error('Non 200 status code while getting release details from Aha')
+            break
     return releases
 
 def getEpicDataGit():
@@ -93,7 +104,7 @@ def getMasterFeatureAha():
     if(rs.status_code==200):
         return rs.json()
     else:
-        #add Failure Logs
+        logger.error('Non 200 status code while getting master feature from Aha! --> {0}'.format(rs.status_code))
         return None
 
 #Create a new master feature on Aha
@@ -151,7 +162,7 @@ def main():
     git_repo=github_object(GITHUB_TOKEN,config.repo_name)
     for items in Zen_Epics['epic_issues']:
         #check if item is available in Endurance:
-        print('processing: '+str(items))
+        logger.info('processing: '+str(items))
         aha_epic=getTranslationData(ENDURANCE,str(items['issue_number']))
         if(aha_epic==None):
             issue=git_repo.issue(items['issue_number'])
@@ -174,13 +185,13 @@ def main():
                 response=insertMasterFeatureAha(release_id,name,description,status, due_date=due_date)
                 if(response.status_code==200):
                     this_master_feature=response.json()
-                    logging.info("CREATED"+  str(this_master_feature['master_feature']['reference_num']))
+                    logger.info("CREATED"+  str(this_master_feature['master_feature']['reference_num']))
                     ENDURANCE[str(items['issue_number'])]={
                         "aha_ref_num":this_master_feature['master_feature']['reference_num']
                     }
                 else:
                     #TODO log Error Failure
-                    print(response.status_code)
+                    logger.info(response.status_code)
             else:
                 #TODO Log error for status not available
                 print(' status un available')
@@ -225,14 +236,14 @@ def main():
                     update_response=updateMasterFeatureAha(aha_epic['aha_ref_num'],changes=changes)
                     if(update_response.status_code==200):
                         
-                        logging.info("UPDATED"+str(aha_epic)+str(changes))
-                        print("updated!:  "+ str(aha_epic) + str(changes))
+                        logger.info("UPDATED"+str(aha_epic)+str(changes))
+                        
                         final_Changes.append("updated!:  "+ str(aha_epic) + str(changes))
                     else:
                         logging.error("Error while updating.."+ str(update_response.status_code)+ str(update_response.content))
                 else:
-                    logging.info('NO CHANGE! '+ str(aha_epic))
-                    print('NO CHANGE! on ' + str(aha_epic))                            
+                    logger.info('NO CHANGE! '+ str(aha_epic))
+                    
     
     update_to_endurance=requests.post(config.Endurance_Source,headers={'x-api-key':config.ndurance_key,'Content-Type':'application/json'}, data= json.dumps(ENDURANCE))
     if(update_to_endurance.status_code==201):
