@@ -237,9 +237,10 @@ def main(skip=[]):
         state=update_aha(items['reference_num'],diff)
         if(state>0):
             change_log['count']=change_log['count']+1
+            change_log['changes'].append({items['reference_num']:diff})
         elif(state<0):
             change_log['errors']=change_log['errors']+1
-        change_log['changes'].append({items['reference_num']:diff})
+        
     logger.info(str(change_log))
     return change_log['changes']
 
