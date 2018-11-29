@@ -167,8 +167,12 @@ def generatediff(Aha_feature,Zen_issue, Git_issue=None , repo_id=None):
                 if(Aha.release.release_date!=Aha.due_date):
                     changes.append({'due_date':Aha.release.release_date})
             elif(config.features_source_of_release_date.lower()=='github' and Git_issue is not None and Git_issue.milestone is not None):
-                changes.append({'start_date':get_milestone_start_date_from_zen(repo_id,Git_issue.milestone.number).split('T')[0]})
-                changes.append({'due_date':str(Git_issue.milestone.due_on.date())})
+                start_date_from_Zen = get_milestone_start_date_from_zen(repo_id,Git_issue.milestone.number).split('T')[0]
+                due_date_from_Zen = str(Git_issue.milestone.due_on.date())
+                if(Aha.start_date != start_date_from_Zen ):
+                    changes.append({'start_date':start_date_from_Zen})
+                if(Aha.due_date != due_date_from_Zen):
+                    changes.append({'due_date':due_date_from_Zen})
             ############################################
     except Exception as e:
         pass
