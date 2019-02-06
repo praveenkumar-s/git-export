@@ -133,7 +133,8 @@ def buildEpicStoryMap(repoid):
         epic_data=getEpicDetailfromZen(repoid,items['issue_number'])
         if(epic_data is not None):
             for issues in epic_data['issues']:
-                issue_epic_map[str(issues['issue_number'])]=items['issue_number']
+                if(str(issues['repo_id'])==repoid):
+                    issue_epic_map[str(issues['issue_number'])]=items['issue_number']
     return issue_epic_map
 
 EPIC_MAP=buildEpicStoryMap(config.Zenhub_repo_Id)
@@ -172,7 +173,7 @@ def generatediff(Aha_feature,Zen_issue, Git_issue=None , repo_id=None):
                 if(Aha.start_date != start_date_from_Zen ):
                     changes.append({'start_date':start_date_from_Zen})
                 if(Aha.due_date != due_date_from_Zen):
-                    changes.append({'due_date':due_date_from_Zen})
+                    changes.append({'due_date':str(Git_issue.milestone.due_on.date())})
             ############################################
     except Exception as e:
         pass
