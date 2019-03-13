@@ -11,6 +11,7 @@ from datetime import datetime
 #import config
 import github3
 from urllib.parse import urljoin
+import releases
 
 logging.basicConfig(level=logging.INFO,
  format="%(levelname)s:%(filename)s,%(lineno)d:%(name)s.%(funcName)s:%(message)s", 
@@ -27,12 +28,33 @@ ZENHUB_TOKEN=config.ZENHUB_TOKEN
 AHA_HEADER={'Authorization':AHA_TOKEN,'Content-Type': "application/json","User-Agent":"praveentechnic@gmail.com"}
 ZENHUB_HEADER={'X-Authentication-Token':ZENHUB_TOKEN}
 GITHUB_TOKEN=config.GITHUB_TOKEN
-
+ZH_ISSUE_RELEASE_MAP={}
 map_data= json.load(open('zen2ahaMap.json'))
 
 ########################DATA_STORE##################################
 ENDURANCE= requests.get(config.Endurance_Source, headers={'x-api-key':config.ndurance_key}).json()
+ENDURANCE_RELEASES= requests.get(config.Endurance_Source_3, headers={'x-api-key':config.ndurance_key}).json()
 ####################################################################
+
+def get_issues_under_releaseID_ZH(release_id):
+    rs= requests.get(urljoin(config.Zenhub_Domain,'/p1/reports/release/{0}/issues'.format(str(release_id))), headers = ZENHUB_HEADER)
+    if(rs.status_code==200):
+        return rs.json()
+    else:
+        return None
+
+
+def build_Release_Map_ZH():
+    #Get All  Releases on ZH
+    ZH_Releases= releases.getReleasesFromZenhub(config.Zenhub_repo_Id)
+    Issue_Release_Map={}
+    for rl in ZH_Releases:
+        issues=get_issues_under_releaseID_ZH(rl['release_id'])
+        for issue in issues:
+            if(str(issue['repo_id'])==config.Zenhub_repo_Id):
+                Issue_Release_Map[str(issue['issue_number'])]=rl['release_id']
+    return Issue_Release_Map
+
 
 
 #create an instance of github_object and return the same
@@ -146,9 +168,10 @@ def generatediff(Aha_feature,Zen_issue, Git_issue=None , repo_id=None):
     changes=[]
     try:        
         if(Aha.workflow_status.name != getTranslationData(map_data,zen.pipeline.name) and getTranslationData(map_data,zen.pipeline.name) is not None):
-            changes.append({'workflow_status':{"name":getTranslationData(map_data,zen.pipeline.name)}})            
-        if(Aha.original_estimate!=zen.estimate.value):
-            changes.append({'original_estimate':zen.estimate.value}) # Update Estimate
+            changes.append({'workflow_status':{"name":getTranslationData(map_data,zen.pipeline.name)}})   
+        if(zen.estimate is not None):             
+            if(Aha.original_estimate!=zen.estimate.value):
+                changes.append({'original_estimate':zen.estimate.value}) # Update Estimate
         if(zen.is_epic==False):
             try:
                 Aha_Epic=Aha.master_feature.reference_num
@@ -175,8 +198,22 @@ def generatediff(Aha_feature,Zen_issue, Git_issue=None , repo_id=None):
                 if(Aha.due_date != due_date_from_Zen):
                     changes.append({'due_date':str(Git_issue.milestone.due_on.date())})
             ############################################
+
+            ###### Handle Releases######################
+            try:
+                Release_in_ZH= ZH_ISSUE_RELEASE_MAP[zen.id] # ZH's Release ID for this Issue
+                Release_in_AHA= Aha.release.id              # Aha's Release ID
+            
+                Translation= ENDURANCE_RELEASES[Release_in_ZH] 
+                if(Release_in_AHA != Translation['aha_release_id']):
+                    changes.append({'release':Translation['aha_release_id']})
+            except KeyError:
+                logger.error("Unable to Find respective ZH release on the Endurance or the release is not mapped to the feature on ZH")
+                
+            ######################
+
     except Exception as e:
-        pass
+        logger.error("Error was encountered during update"+sys.exc_info()[0])
     return changes
 
 #Update details on to aha and Log the same in detail  | Rate Limit : Cant make more than 1 request per second  
@@ -231,13 +268,18 @@ def main(skip=[]):
     #get feature list from aha
     FeatureList=getFeatureListFromAha()
     git_repo=github_object(GITHUB_TOKEN,config.repo_name)
+    global ZH_ISSUE_RELEASE_MAP
+    ZH_ISSUE_RELEASE_MAP= build_Release_Map_ZH()
     for items in FeatureList:
         AhaFeature=getFeatureDetailFromAha(items['reference_num'])
         compound_id=str(list( filter(lambda types: types['name'] == 'compound_id', AhaFeature['integration_fields']) )[0]['value'])
         repoId=compound_id.split('/')[0]
         issueId=compound_id.split('/')[1]
         ZenIssue=getIssueDetailFromZen(repoId,issueId)
-        github_issue_object=git_repo.issue(issueId)
+        try: #Very Randomly this piece of code returns a 502, so will attempt to retry once before crashing
+            github_issue_object=git_repo.issue(issueId)
+        except:
+            github_issue_object=git_repo.issue(issueId)
         diff=generatediff(AhaFeature,ZenIssue, Git_issue=github_issue_object, repo_id= repoId)
         state=update_aha(items['reference_num'],diff)
         if(state>0):
@@ -248,4 +290,6 @@ def main(skip=[]):
         
     logger.info(str(change_log))
     return change_log['changes']
+
+
 

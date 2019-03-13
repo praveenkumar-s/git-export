@@ -84,8 +84,3 @@ def main(repository, file_name):
     
 
 
-if __name__ == '__main__':
-
-    arg=arg_parser().parse_args()
-    main(arg.repository,arg.filename)
-    
