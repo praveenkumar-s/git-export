@@ -9,6 +9,7 @@ import json
 import os
 config= json.loads(os.environ.get('config'))
 config=Objectifier(config)
+import releases
 
 def upload_to_storage(data):
     rs=requests.post('https://funteam.herokuapp.com/insertresults', data= str(data)+ '     \n This Ran @ : '+str(datetime.now()))
@@ -18,7 +19,7 @@ def upload_to_storage(data):
     else:
         return ''
 
-
+releases.main()
 feature_update=aha_zen_adapter.main()
 
 slack_sender.send_message('Features Sync happened @ '+str(datetime.now())+ ' logs @ ' +upload_to_storage(feature_update), config.slack_channel)

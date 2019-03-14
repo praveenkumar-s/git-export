@@ -12,6 +12,7 @@ config= json.loads(os.environ.get('config'))
 config=Objectifier(config)
 from urllib.parse import urljoin
 import time
+import releases
 
 
 logging.basicConfig(level=logging.INFO,
@@ -27,15 +28,38 @@ GITHUB_TOKEN=config.GITHUB_TOKEN
 RELEASES_AHA=None
 
 
+
 AHA_HEADER={'Authorization':AHA_TOKEN,'Content-Type': "application/json","User-Agent":"praveentechnic@gmail.com"}
 ZENHUB_HEADER={'X-Authentication-Token':ZENHUB_TOKEN}
-
+ZH_ISSUE_RELEASE_MAP={}
 
 
 
 ########################DATA_STORE##################################
 ENDURANCE= requests.get(config.Endurance_Source, headers={'x-api-key':config.ndurance_key}).json()
+ENDURANCE_RELEASES= requests.get(config.Endurance_Source_3, headers={'x-api-key':config.ndurance_key}).json()
 ############################################################
+
+def get_issues_under_releaseID_ZH(release_id):
+    rs= requests.get(urljoin(config.Zenhub_Domain,'/p1/reports/release/{0}/issues'.format(str(release_id))), headers = ZENHUB_HEADER)
+    if(rs.status_code==200):
+        return rs.json()
+    else:
+        return None
+
+
+def build_Release_Map_ZH():
+    #Get All  Releases on ZH
+    ZH_Releases= releases.getReleasesFromZenhub(config.Zenhub_repo_Id)
+    Issue_Release_Map={}
+    for rl in ZH_Releases:
+        issues=get_issues_under_releaseID_ZH(rl['release_id'])
+        for issue in issues:
+            if(str(issue['repo_id'])==config.Zenhub_repo_Id):
+                Issue_Release_Map[str(issue['issue_number'])]=rl['release_id']
+    return Issue_Release_Map
+
+
 
 #Get list of Epics from Zen hub
 def getListOfEpicsZen():
@@ -160,6 +184,9 @@ def main():
     RELEASES_AHA=Aha_releases
     Zen_Epics=getListOfEpicsZen()
     git_repo=github_object(GITHUB_TOKEN,config.repo_name)
+    global ZH_ISSUE_RELEASE_MAP
+    ZH_ISSUE_RELEASE_MAP=build_Release_Map_ZH()
+
     for items in Zen_Epics['epic_issues']:
         #check if item is available in Endurance:
         logger.info('processing: '+str(items))
@@ -213,12 +240,16 @@ def main():
                 A_description=Aha_MF['description']['body']
                 A_status=Aha_MF['workflow_status']['name']
                 A_release_id=Aha_MF['release']['reference_num']
+
                 if(A_name!=G_name):
                     changes['name']=G_name
+
                 if(A_description!=G_description):
                     changes['description']=G_description
+
                 if(A_status!=Z_status):
                     changes['workflow_status']={'name':Z_status}
+
                 if(G_Release !=None and config.update_release_dates):
                     if(getTranslationData( Aha_releases,G_Release) is not None ) :
                         if(A_release_id!=getTranslationData( Aha_releases,G_Release)['reference_num']):
@@ -231,6 +262,22 @@ def main():
                 if(config.Track_due_date and issue.milestone is not None):
                     if(Aha_MF['due_date']!=str(issue.milestone.due_on.date())):
                         changes['due_date']=str(issue.milestone.due_on.date())
+                
+                ############Mapping Releases to Master features on Aha
+                try:
+                    Release_in_ZH= ZH_ISSUE_RELEASE_MAP[str(items['issue_number'])]
+                    if(Aha_MF['release'] is not None):
+                        Release_in_AHA= Aha_MF['release']['id']
+                    else:
+                        Release_in_AHA=None
+                
+                    Translation= ENDURANCE_RELEASES[Release_in_ZH] 
+                    if(Release_in_AHA != Translation['aha_release_id']):
+                        changes['release']=Translation['aha_release_id']
+
+                except KeyError:    
+                    logger.error("Unable to Find respective ZH release on the Endurance")
+                #######################################################
 
                 if(changes!={}):
                     update_response=updateMasterFeatureAha(aha_epic['aha_ref_num'],changes=changes)
