@@ -181,22 +181,27 @@ def generatediff(Aha_feature,Zen_issue, Git_issue=None , repo_id=None):
                 Zen_Epic=ENDURANCE[str(EPIC_MAP[zen.id])]['aha_ref_num']
             except:
                 Zen_Epic=None
-            if(Aha_Epic!=Zen_Epic and Zen_Epic is not None):
-                changes.append({'master_feature':Zen_Epic})
+            try:
+             if(Aha_Epic!=Zen_Epic and Zen_Epic is not None):
+                 changes.append({'master_feature':Zen_Epic})
+            except:
+             logger.error("Error occured during processing Master feature update")
             ####Updating start and end date as per release date:
-            
-            if(Aha.release is not None and config.features_source_of_release_date.lower()=='zenhub'):
-                if(Aha.release.start_date!=Aha.start_date):
-                    changes.append({'start_date':Aha.release.start_date})
-                if(Aha.release.release_date!=Aha.due_date):
-                    changes.append({'due_date':Aha.release.release_date})
-            elif(config.features_source_of_release_date.lower()=='github' and Git_issue is not None and Git_issue.milestone is not None):
-                start_date_from_Zen = get_milestone_start_date_from_zen(repo_id,Git_issue.milestone.number).split('T')[0]
-                due_date_from_Zen = str(Git_issue.milestone.due_on.date())
-                if(Aha.start_date != start_date_from_Zen ):
-                    changes.append({'start_date':start_date_from_Zen})
-                if(Aha.due_date != due_date_from_Zen):
-                    changes.append({'due_date':str(Git_issue.milestone.due_on.date())})
+            try:
+             if(Aha.release is not None and config.features_source_of_release_date.lower()=='zenhub'):
+                 if(Aha.release.start_date!=Aha.start_date):
+                     changes.append({'start_date':Aha.release.start_date})
+                 if(Aha.release.release_date!=Aha.due_date):
+                     changes.append({'due_date':Aha.release.release_date})
+             elif(config.features_source_of_release_date.lower()=='github' and Git_issue is not None and Git_issue.milestone is not None):
+                 start_date_from_Zen = get_milestone_start_date_from_zen(repo_id,Git_issue.milestone.number).split('T')[0]
+                 due_date_from_Zen = str(Git_issue.milestone.due_on.date())
+                 if(Aha.start_date != start_date_from_Zen ):
+                     changes.append({'start_date':start_date_from_Zen})
+                 if(Aha.due_date != due_date_from_Zen):
+                     changes.append({'due_date':str(Git_issue.milestone.due_on.date())})
+            except:
+             logger.error("Error occured during start date and due date update")
             ############################################
 
             ###### Handle Releases######################
@@ -213,7 +218,7 @@ def generatediff(Aha_feature,Zen_issue, Git_issue=None , repo_id=None):
             ######################
 
     except Exception as e:
-        logger.error("Error was encountered during update"+sys.exc_info()[0])
+        logger.error("Error was encountered during update")
     return changes
 
 #Update details on to aha and Log the same in detail  | Rate Limit : Cant make more than 1 request per second  
