@@ -1,5 +1,3 @@
-import aha_zen_adapter
-import aha_zen_master_feature_importer
 import slack_sender
 import requests
 from datetime import datetime
@@ -7,8 +5,6 @@ import sys
 from objectifier import Objectifier
 import json
 import os
-config= json.loads(os.environ.get('config'))
-config=Objectifier(config)
 import releases
 
 def upload_to_storage(data):
@@ -19,11 +15,19 @@ def upload_to_storage(data):
     else:
         return ''
 
-releases.main()
-feature_update=aha_zen_adapter.main()
 
-slack_sender.send_message('Features Sync happened @ '+str(datetime.now())+ ' logs @ ' +upload_to_storage(feature_update), config.slack_channel)
-master_feature_update=aha_zen_master_feature_importer.main()
-slack_sender.send_message('Master Features Sync happened @ '+str(datetime.now())+ ' logs @ ' +upload_to_storage(master_feature_update), config.slack_channel)
+def main():
+    config_selector= sys.argv[1]
+    config= json.loads(os.environ.get(config_selector))
+    config=Objectifier(config)
+    import aha_zen_adapter
+    import aha_zen_master_feature_importer
+    releases.main()
+    feature_update=aha_zen_adapter.main()
 
-sys.exit(0)
+    slack_sender.send_message('Features Sync happened @ '+str(datetime.now())+ ' logs @ ' +upload_to_storage(feature_update), config.slack_channel)
+    master_feature_update=aha_zen_master_feature_importer.main()
+    slack_sender.send_message('Master Features Sync happened @ '+str(datetime.now())+ ' logs @ ' +upload_to_storage(master_feature_update), config.slack_channel)
+
+if __name__ == "__main__":
+    main()
